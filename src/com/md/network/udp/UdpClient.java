@@ -1,3 +1,6 @@
+package com.md.network.udp;
+import com.md.network.Network;
+
 import java.io.IOException;
 import java.net.DatagramPacket;
 import java.net.DatagramSocket;
@@ -22,9 +25,10 @@ public class UdpClient extends Network {
 
     public static void main(String[] args) {
         UdpClient client = new UdpClient();
+        //Register console-specific behavior before starting the receive thread.
+        client.setMessageHandler(client::handleConsoleMessage);
         client.connect();
 
-        //Only start the remaining operations if connect() successfully created the UDP socket.
         if (client.running) {
             client.startReceiveThread();
             client.startConsoleInput();
@@ -54,42 +58,43 @@ public class UdpClient extends Network {
     public void receiveMessage() {
         while (running) {
             try {
+                //Create storage for one UDP datagram.
                 byte[] buffer = new byte[MAX_UDP_PAYLOAD_SIZE];
-
-                /* The packet initially points to an empty byte array.
-                 * When socket.receive(packet) succeeds, Java fills this packet with:
-                 * - the received bytes
-                 * - the sender's address
-                 * - the sender's port
-                 * - the actual number of received bytes
-                 */
+                // The DatagramPacket initially points to an empty receive buffer.
                 DatagramPacket packet = new DatagramPacket(buffer, buffer.length);
+                //Block until one complete UDP datagram arrives.
                 socket.receive(packet);
-
-                /* packet.getLength() tells us exactly how many bytes were received.
-                 * The buffer may have a capacity of 65,507 bytes, but the actual message may be only 5 bytes long.
-                 * We copy only the real message bytes into a correctly sized byte array.
-                 */
+                // Copy only the actual packet bytes. The receive buffer may contain 65,507 positions even when the received datagram contains only a few bytes.
                 byte[] messageData = new byte[packet.getLength()];
-                System.arraycopy( packet.getData(),  packet.getOffset(),  messageData, 0, packet.getLength());
 
-                /* The UDP transport has now delivered byte[] data. This console application
-                chooses to interpret those bytes as UTF-8 text so they can be displayed to the user. */
-                String message = bytesToText(messageData);
-                System.out.println("Server: " + message);
+                System.arraycopy(packet.getData(), packet.getOffset(), messageData, 0, packet.getLength());
 
-                if (message.equalsIgnoreCase("exit")) {
-                    System.out.println("Server left.");
-                    disconnect();
-                    break;
-                }
+                //UDP already preserves one-datagram-per-message boundaries. Deliver this complete datagram to the registered handler.
+                deliverMessage(messageData);
 
             } catch (IOException e) {
+                // socket.close() is used to stop a thread blocked in receive(). That normally causes receive() to throw an exception.
+                // Only print an error when the client was supposed to continue running.
                 if (running) {
-                    System.out.println( "Receive error: " + e.getMessage() );
+                    System.out.println(
+                            "Receive error: " + e.getMessage()
+                    );
                 }
             }
         }
+    }
+
+    //Console-specific handling for the standalone UDP client.
+    private void handleConsoleMessage(byte[] data) {
+        String message = bytesToText(data);
+
+        if (message.equalsIgnoreCase("exit")) {
+            System.out.println("Server left.");
+            disconnect();
+            return;
+        }
+
+        System.out.println("Server: " + message);
     }
 
     @Override

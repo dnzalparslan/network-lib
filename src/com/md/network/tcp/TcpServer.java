@@ -1,3 +1,6 @@
+package com.md.network.tcp;
+import com.md.network.Network;
+
 import java.io.BufferedInputStream;
 import java.io.BufferedOutputStream;
 import java.io.DataInputStream;
@@ -19,6 +22,9 @@ public class TcpServer extends Network {
 
     public static void main(String[] args) {
         TcpServer server = new TcpServer();
+        //The standalone console server chooses to interpret incoming bytes as UTF-8 text.
+        server.setMessageHandler(server::handleConsoleMessage);
+
         server.start();
     }
 
@@ -74,26 +80,23 @@ public class TcpServer extends Network {
     public void receiveMessage() {
         try {
             while (connected) {
-                int messageLength = input.readInt(); //Read the 4-byte length prefix
-                validateMessageLength(messageLength); //Make sure the announced length is valid.
-                byte[] messageData = new byte[messageLength]; //Allocate exactly enough space for this message
-                input.readFully(messageData); //Read exactly that number of bytes
-                String message = bytesToText(messageData); //The server console interprets the byte message as UTF-8 text.
-
-                if (message.equalsIgnoreCase("exit")) {
-                    System.out.println("Client disconnected.");
-                    connected = false;
-                    disconnect();
-                    break;
-                }
-
-                System.out.println("Client: " + message);
+                // Read the length prefix belonging to one complete TCP message.
+                int messageLength = input.readInt();
+                //Validate the announced size before allocating memory.
+                validateMessageLength(messageLength);
+                //Allocate the exact payload size.
+                byte[] messageData = new byte[messageLength];
+                //Read the complete payload.
+                input.readFully(messageData);
+                //Pass the raw bytes to the application-defined handler.
+                deliverMessage(messageData);
             }
 
         } catch (EOFException e) {
             if (connected) {
                 System.out.println("Client closed the connection.");
             }
+
             disconnect();
 
         } catch (IOException e) {
@@ -102,8 +105,25 @@ public class TcpServer extends Network {
                         "Receive error: " + e.getMessage()
                 );
             }
+
             disconnect();
         }
+    }
+
+    //Console behavior for the standalone TcpServer program.
+    // A different application can register a different handler without changing the TCP transport code.
+    private void handleConsoleMessage(byte[] data) {
+        String message = bytesToText(data);
+
+        if (message.equalsIgnoreCase("exit")) {
+            System.out.println("Client disconnected.");
+
+            // Do not set running to false. running remains true so the ServerSocket stays open and another client can connect later.
+            disconnect();
+            return;
+        }
+
+        System.out.println("Client: " + message);
     }
 
     //synchronized means only one thread can execute this method on the same object at a time.

@@ -1,3 +1,6 @@
+package com.md.network.udp;
+import com.md.network.Network;
+
 import java.io.IOException;
 import java.net.DatagramPacket;
 import java.net.DatagramSocket;
@@ -15,9 +18,10 @@ public class UdpServer extends Network {
 
     public static void main(String[] args) {
         UdpServer server = new UdpServer();
+        //Register standalone console behavior before starting reception.
+        server.setMessageHandler(server::handleConsoleMessage);
         server.connect();
 
-        //Continue only if the socket was opened successfully.
         if (server.running) {
             server.startReceiveThread();
             server.startConsoleInput();
@@ -47,31 +51,54 @@ public class UdpServer extends Network {
     public void receiveMessage() {
         while (running) {
             try {
-                //Create fresh storage for the next UDP datagram.
+                //Create fresh storage for one UDP datagram.
                 byte[] buffer = new byte[MAX_UDP_PAYLOAD_SIZE];
-                DatagramPacket packet =  new DatagramPacket(buffer, buffer.length);
-                //Blocks until one complete UDP datagram arrives.
+                DatagramPacket packet = new DatagramPacket(buffer, buffer.length);
+                //Block until one complete datagram arrives.
                 socket.receive(packet);
+                //Copy only the actual datagram bytes.
                 byte[] messageData = new byte[packet.getLength()];
-                System.arraycopy( packet.getData(), packet.getOffset(),  messageData,  0,  packet.getLength() );
 
+                System.arraycopy(
+                        packet.getData(),
+                        packet.getOffset(),
+                        messageData,
+                        0,
+                        packet.getLength()
+                );
+
+                //Remember the sender before delivering the message.
+                // A registered handler may immediately create and send a response. sendMessage() needs this address and port.
                 clientAddress = packet.getAddress();
                 clientPort = packet.getPort();
-                String message = bytesToText(messageData);
-                System.out.println("Client: " + message);
 
-                if (message.equalsIgnoreCase("exit")) {
-                    System.out.println("Client left.");
-                    clientAddress = null;
-                    clientPort = 0;
-                }
+                //Pass the raw datagram bytes to the registered application handler.
+                deliverMessage(messageData);
 
             } catch (IOException e) {
                 if (running) {
-                    System.out.println( "Receive error: " + e.getMessage() );
+                    System.out.println(
+                            "Receive error: " + e.getMessage()
+                    );
                 }
             }
         }
+    }
+
+    //Console-specific handling for the standalone UDP server.
+    private void handleConsoleMessage(byte[] data) {
+        String message = bytesToText(data);
+
+        if (message.equalsIgnoreCase("exit")) {
+            System.out.println("Client left.");
+
+            //UDP has no permanent connection to close. Forget the latest client's destination information so the server cannot accidentally send future console messages to a client that  has announced it is leaving.
+            clientAddress = null;
+            clientPort = 0;
+            return;
+        }
+
+        System.out.println("Client: " + message);
     }
 
     @Override

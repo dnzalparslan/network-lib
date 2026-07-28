@@ -1,3 +1,6 @@
+package com.md.network.tcp;
+import com.md.network.Network;
+
 import java.io.BufferedInputStream;
 import java.io.BufferedOutputStream;
 import java.io.DataInputStream;
@@ -17,6 +20,8 @@ public class TcpClient extends Network {
 
     public static void main(String[] args) {
         TcpClient client = new TcpClient();
+        //TcpClient itself only transports byte arrays. This handler decides to interpret those bytes as UTF-8 text.
+        client.setMessageHandler(client::handleConsoleMessage);
         client.running = true;
         client.startConnectThread();
         client.startConsoleInput();
@@ -75,29 +80,28 @@ public class TcpClient extends Network {
     public void receiveMessage() {
         try {
             while (connected) {
-                int messageLength = input.readInt(); //Step 1: Read the 4-byte integer that tells us how many message bytes follow.
-                validateMessageLength(messageLength); //Step 2: Validate the length before creating an array.
-                byte[] messageData = new byte[messageLength]; //Step 3: Create an array exactly large enough for this message.
-                input.readFully(messageData); //Step 4: Read exactly messageLength bytes.
-                //A normal read() call is not guaranteed to fill the array. readFully() keeps reading until the array is full or the connection ends.
+                // Step 1: Read the four-byte integer that announces the payload size.
+                int messageLength = input.readInt();
+                // Step 2: Reject negative or excessively large lengths before allocating an array.
+                validateMessageLength(messageLength);
+                // Step 3: Allocate exactly enough space for the announced payload.
+                byte[] messageData = new byte[messageLength];
 
-                String message = bytesToText(messageData); //Interpret the delivered bytes as UTF-8.
+                // Step 4: Read exactly messageLength bytes.
+                // A normal read() call may return fewer bytes than requested. readFully() continues until the array is full or the connection closes.
+                input.readFully(messageData);
 
-                if (message.equalsIgnoreCase("exit")) {
-                    System.out.println("Server disconnected.");
-                    running = false;
-                    disconnect();
-                    break;
-                }
-
-                System.out.println("Server: " + message);
+                //Step 5: Deliver the complete raw payload to the registered handler.
+                // TcpClient does not decide whether the bytes contain text, a Circle protocol frame, an image, or another binary format.
+                deliverMessage(messageData);
             }
 
         } catch (EOFException e) {
-            //EOFException usually means the other side closed its socket while we were waiting for the next frame.
+            //The server closed its socket while this client was waiting for thenext TCP frame.
             if (connected) {
                 System.out.println("Server closed the connection.");
             }
+
             disconnect();
 
         } catch (IOException e) {
@@ -106,8 +110,25 @@ public class TcpClient extends Network {
                         "Connection lost: " + e.getMessage()
                 );
             }
+
             disconnect();
         }
+    }
+
+    // Console-specific message handling. This method is not part of TCP transport or framing.
+    // It is only used by TcpClient.main() so the standalone console demo behaves as before.
+    private void handleConsoleMessage(byte[] data) {
+        String message = bytesToText(data);
+
+        if (message.equalsIgnoreCase("exit")) {
+            System.out.println("Server disconnected.");
+
+            running = false;
+            disconnect();
+            return;
+        }
+
+        System.out.println("Server: " + message);
     }
 
     //synchronized means only one thread can execute this method on the same object at a time.
