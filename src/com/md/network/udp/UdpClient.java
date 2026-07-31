@@ -8,8 +8,11 @@ import java.net.InetAddress;
 
 public class UdpClient extends Network {
 
-    private static final int SERVER_PORT = 5000;
-    private static final String SERVER_ADDRESS = "localhost";
+    private static final int DEFAULT_SERVER_PORT = 5000;
+    private static final String DEFAULT_SERVER_ADDRESS = "localhost";
+
+    private final String serverHost;
+    private final int serverPort;
 
     /*
      * The theoretical maximum UDP payload for IPv4 is 65,507 bytes.
@@ -23,15 +26,41 @@ public class UdpClient extends Network {
     private DatagramSocket socket;
     private InetAddress serverAddress; //Stores the resolved IP address of the UDP server
 
+    //Preserves the original localhost:5000 behavior.
+    public UdpClient() {
+        this(DEFAULT_SERVER_ADDRESS, DEFAULT_SERVER_PORT);
+    }
+
+    // Allows another application to select the destination.
+    public UdpClient(String serverHost, int serverPort) {
+        if (serverHost == null || serverHost.isBlank()) {
+            throw new IllegalArgumentException( "Server address cannot be blank.");
+        }
+
+        if (serverPort < 1 || serverPort > 65_535) {
+            throw new IllegalArgumentException( "Port must be between 1 and 65535.");
+        }
+
+        this.serverHost = serverHost;
+        this.serverPort = serverPort;
+    }
+
     public static void main(String[] args) {
         UdpClient client = new UdpClient();
-        //Register console-specific behavior before starting the receive thread.
         client.setMessageHandler(client::handleConsoleMessage);
-        client.connect();
+        client.start();
 
         if (client.running) {
-            client.startReceiveThread();
             client.startConsoleInput();
+        }
+    }
+
+    //Starts the UDP client without starting console input.
+    public void start() {
+        connect();
+
+        if (running) {
+            startReceiveThread();
         }
     }
 
@@ -40,11 +69,11 @@ public class UdpClient extends Network {
         try {
             //Creates a UDP socket using an automatically selected local port.
             socket = new DatagramSocket(); //Unlike the server, the client does not need to request a particular port number.
-            serverAddress = InetAddress.getByName(SERVER_ADDRESS); //Converts the hostname "localhost" into an InetAddress.
+            serverAddress = InetAddress.getByName(serverHost); //Converts the hostname "localhost" into an InetAddress.
             running = true;
             connected = true;
             System.out.println("UDP Client started.");
-            System.out.println( "Sending to server at "  + SERVER_ADDRESS  + ":" + SERVER_PORT);
+            System.out.println( "Sending to server at " + serverHost + ":" + serverPort);
 
         } catch (IOException e) {
             System.out.println( "Could not start UDP client: " + e.getMessage() );
@@ -119,7 +148,8 @@ public class UdpClient extends Network {
              * - the number of bytes to send
              * - the destination IP address
              * - the destination port */
-            DatagramPacket packet = new DatagramPacket(data, data.length, serverAddress, SERVER_PORT);
+            DatagramPacket packet = new DatagramPacket(data, data.length, serverAddress, serverPort);
+
             socket.send(packet); //Sends the entire byte array as one UDP datagram.
 
         } catch (IOException e) {

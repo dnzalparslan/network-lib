@@ -19,15 +19,13 @@ public abstract class Network {
      * Consumer<byte[]> means:
      * - it receives a byte[]
      * - it performs an action
-     * - it does not return a value
-     */
-    private volatile Consumer<byte[]> messageHandler = data -> System.out.println(bytesToText(data));
-
-    /*
+     * - it does not return a value */
+    private volatile Consumer<byte[]> messageHandler =
+            data -> System.out.println(bytesToText(data));
+    /*Similar to:
     private void defaultHandleMessage(byte[] data) {
-    System.out.println(bytesToText(data));
-}
-     */
+    System.out.println(bytesToText(data)); */
+
     public abstract void connect();
 
     public abstract void sendMessage(byte[] data);
@@ -51,11 +49,10 @@ public abstract class Network {
         this.messageHandler = Objects.requireNonNull(messageHandler, "messageHandler cannot be null");
     }
 
-    //Sends received bytes to the currently registered handler. A copy is passed so that the handler does not
-    // accidentally modify the original receive buffer owned by the networking class.
+    //Sends received bytes to the currently registered handler.
     protected void deliverMessage(byte[] data) {
         Objects.requireNonNull(data, "received data cannot be null");
-
+        //A copy is passed so that the handler does not accidentally modify the original receive buffer owned by the networking class.
         byte[] safeCopy = Arrays.copyOf(data, data.length);
         messageHandler.accept(safeCopy);
     }

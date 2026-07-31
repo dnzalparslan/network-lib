@@ -12,7 +12,8 @@ import java.net.Socket;
 
 public class TcpServer extends Network {
 
-    private static final int PORT = 5050;
+    private static final int DEFAULT_PORT = 5050;
+    private final int port;
 
     private ServerSocket serverSocket;
     private Socket clientSocket;
@@ -20,19 +21,33 @@ public class TcpServer extends Network {
     private DataInputStream input;
     private DataOutputStream output;
 
-    public static void main(String[] args) {
-        TcpServer server = new TcpServer();
-        //The standalone console server chooses to interpret incoming bytes as UTF-8 text.
-        server.setMessageHandler(server::handleConsoleMessage);
-
-        server.start();
+    //Preserves the original port 5050 behavior.
+    public TcpServer() {
+        this(DEFAULT_PORT);
     }
 
+    //Allows applications to choose a server port.
+    public TcpServer(int port) {
+        if (port < 1 || port > 65_535) {
+            throw new IllegalArgumentException(
+                    "Port must be between 1 and 65535."
+            );
+        }
+
+        this.port = port;
+    }
+    public static void main(String[] args) {
+        TcpServer server = new TcpServer();
+        server.setMessageHandler(server::handleConsoleMessage);
+        server.start();
+        server.startConsoleInput();
+    }
+
+    //Starts TCP networking without starting console input.
     public void start() {
         System.out.println("TCP Server started.");
         running = true;
         startConnectThread();
-        startConsoleInput();
     }
 
     public void startConnectThread() {
@@ -44,8 +59,8 @@ public class TcpServer extends Network {
     @Override
     public void connect() {
         try {
-            System.out.println("Opening server on port " + PORT);
-            serverSocket = new ServerSocket(PORT);
+            System.out.println("Opening server on port " + port);
+            serverSocket = new ServerSocket(port);
 
             while (running) {
                 if (!connected) {

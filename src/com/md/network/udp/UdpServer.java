@@ -9,21 +9,35 @@ import java.net.SocketException;
 
 public class UdpServer extends Network {
 
-    private static final int PORT = 5000;
+    private static final int DEFAULT_PORT = 5000;
+    private final int port;
+
     //The theoretical maximum UDP payload for IPv4.
     private static final int MAX_UDP_PAYLOAD_SIZE = 65_507;
     private DatagramSocket socket;
     private InetAddress clientAddress;
     private int clientPort;
 
+    //Default constructor used by the original standalone UDP demo.
+    public UdpServer() {
+        this(DEFAULT_PORT);
+    }
+
+    //Configurable constructor used by applications such as Circle Rotation.
+    public UdpServer(int port) {
+        if (port < 1 || port > 65_535) {
+            throw new IllegalArgumentException("Port must be between 1 and 65535.");
+        }
+
+        this.port = port;
+    }
+
     public static void main(String[] args) {
         UdpServer server = new UdpServer();
-        //Register standalone console behavior before starting reception.
         server.setMessageHandler(server::handleConsoleMessage);
-        server.connect();
+        server.start();
 
         if (server.running) {
-            server.startReceiveThread();
             server.startConsoleInput();
         }
     }
@@ -32,10 +46,10 @@ public class UdpServer extends Network {
     public void connect() {
         try {
             //Binds the DatagramSocket to port 5000 so that clients can send packets to server-address:5000
-            socket = new DatagramSocket(PORT);
+            socket = new DatagramSocket(port);
             running = true;
             connected = true;
-            System.out.println( "UDP Server started on port " + PORT);
+            System.out.println( "UDP Server started on port " + port);
             System.out.println("Waiting for messages...");
 
         } catch (SocketException e) {
@@ -44,6 +58,16 @@ public class UdpServer extends Network {
             running = false;
             connected = false;
             closeSocket();
+        }
+    }
+
+    // Starts UDP reception without starting console input.
+    // Applications such as Circle Rotation register their own handler and call this method.
+    public void start() {
+        connect();
+
+        if (running) {
+            startReceiveThread();
         }
     }
 
@@ -151,6 +175,11 @@ public class UdpServer extends Network {
             socket.close();
         }
         socket = null;
+    }
+
+    //Returns true after at least one client has sent a packet and the server therefore knows where a response can be sent (Since UDP has no permanent connection. )
+    public boolean hasKnownClient() {
+        return clientAddress != null && clientPort != 0;
     }
 
     @Override
