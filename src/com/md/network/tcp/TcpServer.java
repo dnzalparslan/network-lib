@@ -181,16 +181,27 @@ public class TcpServer extends Network {
     }
 
     @Override
-    public void disconnect() {
+    public synchronized void disconnect() {
+
+        //A client connection needs closing if: connected is still true, or a client socket still exists.
+        boolean hasClientConnection = connected || clientSocket != null;
+
+        //The whole server needs closing only when running is false and the ServerSocket still exists.
+        boolean hasServerSocketToClose = !running && serverSocket != null;
+
+        //If another thread already closed everything, there is nothing left to do or print.
+        if (!hasClientConnection && !hasServerSocketToClose) {
+            return;
+        }
+
         System.out.println("Disconnecting...");
         connected = false;
-        //If only one client disconnected and running is still true,the ServerSocket stays open so another client can connect.
         closeClientConnectionResources();
 
-        //If the whole server is stopping, also close the ServerSocket.
         if (!running) {
             closeServerSocket();
         }
+
         System.out.println("Disconnected.");
     }
 
