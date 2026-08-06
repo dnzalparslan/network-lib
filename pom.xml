@@ -1,0 +1,87 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="
+             http://maven.apache.org/POM/4.0.0
+             https://maven.apache.org/xsd/maven-4.0.0.xsd">
+
+    <modelVersion>4.0.0</modelVersion>
+
+    <!--
+        Maven coordinates uniquely identify this project.
+    -->
+    <groupId>com.md</groupId>
+    <artifactId>network-lib</artifactId>
+    <version>1.0.0</version>
+
+    <!-- This project produces a JAR file. -->
+    <packaging>jar</packaging>
+
+    <name>Network Library</name>
+    <description>
+        Generic byte-array-based TCP and UDP networking library.
+    </description>
+
+    <properties>
+        <!-- Compile and target Java 22. -->
+        <maven.compiler.release>22</maven.compiler.release>
+
+        <!-- Treat all source files as UTF-8. -->
+        <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+    </properties>
+
+    <build>
+        <!--
+            Produces target/network-lib-1.0.0.jar
+            instead of changing the default Maven naming convention.
+        -->
+        <finalName>${project.artifactId}-${project.version}</finalName>
+
+        <plugins>
+            <!--
+                Compiles the Java source code.
+            -->
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-compiler-plugin</artifactId>
+                <version>3.14.1</version>
+                <configuration>
+                    <release>${maven.compiler.release}</release>
+                    <encoding>${project.build.sourceEncoding}</encoding>
+                    <showWarnings>true</showWarnings>
+                </configuration>
+            </plugin>
+
+            <!--
+                Packages the compiled classes into a JAR and adds
+                the Main-Class entry to META-INF/MANIFEST.MF.
+            -->
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-jar-plugin</artifactId>
+                <version>3.5.1</version>
+                <configuration>
+                    <archive>
+                        <manifest>
+                            <mainClass>
+                                com.md.network.NetworkLauncher
+                            </mainClass>
+                        </manifest>
+
+                        <manifestEntries>
+                            <Implementation-Title>
+                                Network Library
+                            </Implementation-Title>
+
+                            <Implementation-Version>
+                                ${project.version}
+                            </Implementation-Version>
+                        </manifestEntries>
+                    </archive>
+                </configuration>
+            </plugin>
+        </plugins>
+    </build>
+
+</project>
