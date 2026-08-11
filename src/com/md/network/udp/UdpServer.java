@@ -9,7 +9,6 @@ import java.net.SocketException;
 
 public class UdpServer extends Network {
 
-    private static final int DEFAULT_PORT = 5000;
     private final int port;
 
     //The theoretical maximum UDP payload for IPv4.
@@ -18,11 +17,6 @@ public class UdpServer extends Network {
     private InetAddress clientAddress;
     private int clientPort;
 
-    //Default constructor used by the original standalone UDP demo.
-    public UdpServer() {
-        this(DEFAULT_PORT);
-    }
-
     //Configurable constructor used by applications such as Circle Rotation.
     public UdpServer(int port) {
         if (port < 1 || port > 65_535) {
@@ -30,16 +24,6 @@ public class UdpServer extends Network {
         }
 
         this.port = port;
-    }
-
-    public static void main(String[] args) {
-        UdpServer server = new UdpServer();
-        server.setMessageHandler(server::handleConsoleMessage);
-        server.start();
-
-        if (server.running) {
-            server.startConsoleInput();
-        }
     }
 
     @Override

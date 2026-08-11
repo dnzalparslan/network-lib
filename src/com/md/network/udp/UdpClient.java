@@ -8,9 +8,6 @@ import java.net.InetAddress;
 
 public class UdpClient extends Network {
 
-    private static final int DEFAULT_SERVER_PORT = 5000;
-    private static final String DEFAULT_SERVER_ADDRESS = "localhost";
-
     private final String serverHost;
     private final int serverPort;
 
@@ -26,11 +23,6 @@ public class UdpClient extends Network {
     private DatagramSocket socket;
     private InetAddress serverAddress; //Stores the resolved IP address of the UDP server
 
-    //Preserves the original localhost:5000 behavior.
-    public UdpClient() {
-        this(DEFAULT_SERVER_ADDRESS, DEFAULT_SERVER_PORT);
-    }
-
     // Allows another application to select the destination.
     public UdpClient(String serverHost, int serverPort) {
         if (serverHost == null || serverHost.isBlank()) {
@@ -43,16 +35,6 @@ public class UdpClient extends Network {
 
         this.serverHost = serverHost;
         this.serverPort = serverPort;
-    }
-
-    public static void main(String[] args) {
-        UdpClient client = new UdpClient();
-        client.setMessageHandler(client::handleConsoleMessage);
-        client.start();
-
-        if (client.running) {
-            client.startConsoleInput();
-        }
     }
 
     //Starts the UDP client without starting console input.

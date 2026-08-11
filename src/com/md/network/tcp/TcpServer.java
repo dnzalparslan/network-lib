@@ -12,7 +12,6 @@ import java.net.Socket;
 
 public class TcpServer extends Network {
 
-    private static final int DEFAULT_PORT = 5050;
     private final int port;
 
     private ServerSocket serverSocket;
@@ -20,11 +19,6 @@ public class TcpServer extends Network {
 
     private DataInputStream input;
     private DataOutputStream output;
-
-    //Preserves the original port 5050 behavior.
-    public TcpServer() {
-        this(DEFAULT_PORT);
-    }
 
     //Allows applications to choose a server port.
     public TcpServer(int port) {
@@ -35,12 +29,6 @@ public class TcpServer extends Network {
         }
 
         this.port = port;
-    }
-    public static void main(String[] args) {
-        TcpServer server = new TcpServer();
-        server.setMessageHandler(server::handleConsoleMessage);
-        server.start();
-        server.startConsoleInput();
     }
 
     //Starts TCP networking without starting console input.

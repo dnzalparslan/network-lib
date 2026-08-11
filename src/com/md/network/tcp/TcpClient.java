@@ -15,16 +15,8 @@ public class TcpClient extends Network {
     private DataInputStream input;  //DataInputStream can read both primitive values (int) and exact byte sequences unlike BufferedReader
     private DataOutputStream output; //DataOutputStream can write both unlike PrintWriter.
 
-    private static final String DEFAULT_SERVER_ADDRESS = "localhost";
-    private static final int DEFAULT_PORT = 5050;
-
     private final String serverAddress;
     private final int port;
-
-    //Preserves the original localhost:5050 behavior.
-    public TcpClient() {
-        this(DEFAULT_SERVER_ADDRESS, DEFAULT_PORT);
-    }
 
     //Allows applications to select a TCP server.
     public TcpClient(String serverAddress, int port) {
@@ -38,13 +30,6 @@ public class TcpClient extends Network {
 
         this.serverAddress = serverAddress;
         this.port = port;
-    }
-
-    public static void main(String[] args) {
-        TcpClient client = new TcpClient();
-        client.setMessageHandler(client::handleConsoleMessage);
-        client.start();
-        client.startConsoleInput();
     }
 
     //Starts connection and automatic reconnection without console input.

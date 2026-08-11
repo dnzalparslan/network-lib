@@ -1,0 +1,6 @@
+{
+  "protocol": "tcp",
+  "type": "client",
+  "ip": "localhost",
+  "port": 5050
+}
